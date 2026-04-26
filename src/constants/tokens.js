@@ -1,0 +1,23 @@
+// Design tokens — 색상, 그림자 등 전역 스타일 상수
+export const T = {
+  bg:           '#F8F7F4',
+  surface:      '#FFFFFF',
+  surfaceAlt:   '#F3F2EF',
+  border:       '#E8E5DF',
+  borderMid:    '#D4D0C8',
+  accent:       '#5B4FF5',
+  accentLight:  '#EEEDFD',
+  accentMid:    '#7B70F7',
+  warn:         '#F59E0B',
+  warnLight:    '#FFFBEB',
+  warnBorder:   '#FDE68A',
+  success:      '#10B981',
+  successLight: '#ECFDF5',
+  red:          '#EF4444',
+  text:         '#1A1A1A',
+  textMid:      '#6B6866',
+  textDim:      '#A8A39D',
+  shadow:       '0 1px 3px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.05)',
+  shadowMd:     '0 2px 8px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06)',
+  shadowLg:     '0 4px 16px rgba(0,0,0,0.10), 0 16px 40px rgba(0,0,0,0.07)',
+}
