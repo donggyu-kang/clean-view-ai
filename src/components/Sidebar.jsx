@@ -4,11 +4,9 @@ import { Ico } from './Ico'
 
 const NAV_ITEMS = [
   { id: 'chat',   icon: 'chat',   label: '채팅'     },
-  { id: 'memory', icon: 'memory', label: '내 기억'  },
-  { id: 'trace',  icon: 'chart',  label: '처리 과정' },
 ]
 
-export function Sidebar({ active, onNav, traceStatus }) {
+export function Sidebar({ active, onNav }) {
   const navigate = useNavigate()
 
   return (
@@ -42,14 +40,6 @@ export function Sidebar({ active, onNav, traceStatus }) {
           onMouseLeave={e => { if (active !== item.id) e.currentTarget.style.background = 'transparent' }}
         >
           <Ico name={item.icon} size={18} color={active === item.id ? T.accent : T.textMid} />
-
-          {/* 처리 중 인디케이터 */}
-          {item.id === 'trace' && traceStatus === 'running' && (
-            <div style={{ position: 'absolute', top: 7, right: 7, width: 6, height: 6, borderRadius: '50%', background: T.accent, animation: 'blink 0.7s infinite', boxShadow: `0 0 4px ${T.accent}` }} />
-          )}
-          {item.id === 'trace' && traceStatus === 'done' && active !== 'trace' && (
-            <div style={{ position: 'absolute', top: 7, right: 7, width: 6, height: 6, borderRadius: '50%', background: T.success, boxShadow: `0 0 4px ${T.success}` }} />
-          )}
         </button>
       ))}
 

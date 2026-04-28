@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { T } from '../constants/tokens'
-import { PIPELINE, TOTAL_MS } from '../constants/mockData'
+import { PIPELINE, TOTAL_MS, EMBEDDING_SPAN } from '../constants/mockData'
 import { Ico } from './Ico'
 
 export function TraceModal({ open, onClose }) {
@@ -82,13 +82,51 @@ export function TraceModal({ open, onClose }) {
           })}
         </div>
 
+        {/* Embedding span detail */}
+        <div style={{ padding: '4px 28px 20px' }}>
+          <div style={{
+            background: T.surfaceAlt,
+            borderRadius: 12,
+            border: `1px solid ${T.border}`,
+            overflow: 'hidden',
+          }}>
+            <div style={{
+              padding: '9px 14px',
+              borderBottom: `1px solid ${T.border}`,
+              display: 'flex', alignItems: 'center', gap: 8,
+            }}>
+              <div style={{ width: 7, height: 7, borderRadius: '50%', background: T.accent, flexShrink: 0 }} />
+              <span style={{ fontSize: 12, fontWeight: 600, color: T.textMid, flex: 1 }}>
+                기억 검색 분석
+              </span>
+              <span style={{ fontSize: 11, fontWeight: 700, fontFamily: 'DM Mono, monospace', color: T.accent }}>
+                {EMBEDDING_SPAN.latency_ms}ms
+              </span>
+            </div>
+            <div style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 7 }}>
+              {[
+                ['분석 모델',      EMBEDDING_SPAN.attributes.model_name],
+                ['질문 글자 수',   `${EMBEDDING_SPAN.attributes.input_text_length}자`],
+                ['처리 토큰 수',   `${EMBEDDING_SPAN.attributes.token_usage}개`],
+                ['의미 벡터 크기', `${EMBEDDING_SPAN.attributes.dimensions}차원`],
+                ['소요 시간',     `${EMBEDDING_SPAN.latency_ms}ms`],
+              ].map(([key, val]) => (
+                <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                  <span style={{ fontSize: 12, color: T.textMid }}>{key}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, fontFamily: 'DM Mono, monospace', color: T.text }}>{val}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
         {/* Footer stats */}
         <div style={{ padding: '16px 28px 24px', borderTop: `1px solid ${T.border}`, display: 'flex' }}>
           {[
-            { label: '총 소요 시간', val: `${TOTAL_MS}ms` },
-            { label: '참고한 기억', val: '3개' },
+            { label: '총 소요 시간',  val: `${TOTAL_MS}ms` },
+            { label: '참고한 기억',  val: '3개' },
             { label: '다른 대화에서', val: '2개' },
-            { label: '사용된 토큰', val: '2,341' },
+            { label: '임베딩 토큰',  val: `${EMBEDDING_SPAN.attributes.token_usage}` },
           ].map((s, i) => (
             <div key={s.label} style={{
               flex: 1, textAlign: 'center',

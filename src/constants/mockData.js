@@ -58,3 +58,14 @@ export const PIPELINE = [
 ]
 
 export const TOTAL_MS = PIPELINE.reduce((s, p) => s + p.ms, 0)
+
+export const EMBEDDING_SPAN = {
+  spanName: 'embedding_generation',
+  attributes: {
+    model_name:         'text-embedding-004',
+    input_text_length:  12,
+    token_usage:        8,
+    dimensions:         768,
+  },
+  latency_ms: 67,
+}
