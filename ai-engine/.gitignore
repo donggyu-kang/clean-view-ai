@@ -1,0 +1,25 @@
+# --- Python / Virtual Environment ---
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+
+# --- Environment Variables (Security) ---
+.env
+
+# --- Editor / IDE ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- OS Specific ---
+.DS_Store
+Thumbs.db
+
+# --- Project Specific ---
+# 임시로 생성되는 로그나 데이터 파일
+*.log
