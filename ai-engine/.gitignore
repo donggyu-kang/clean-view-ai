@@ -23,3 +23,8 @@ Thumbs.db
 # --- Project Specific ---
 # 임시로 생성되는 로그나 데이터 파일
 *.log
+
+# [DATABASE]
+# PostgreSQL 로컬 데이터 저장 폴더 제외
+postgres_data/
+postgres_data/**
