@@ -12,9 +12,10 @@ from alembic import context
 # -----------------------------------------------------------------
 from src.core.config import settings
 from src.models.base import Base
-# 중요: 모든 모델 파일(document.py 등)을 여기서 import 해야 
+# 중요: 모든 모델 파일(document.py 등)을 여기서 import 해야함 
 # Alembic이 "아, 이런 테이블을 만들어야 하구나!" 하고 인식합니다.
 from src.models.document import DocumentChunk 
+from src.models.message import ChatMessage
 # -----------------------------------------------------------------
 
 # this is the Alembic Config object, which provides
