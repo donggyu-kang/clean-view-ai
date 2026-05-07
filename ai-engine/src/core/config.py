@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     Pydantic Settings를 사용하여 .env 파일의 환경 변수를 자동으로 로드
     """
 
+    PROJECT_NAME: str = "CleanViewAI-Engine"
+
     # [DATABASE] PostgreSQL + pgvector 설정
     DATABASE_URL: str
     
