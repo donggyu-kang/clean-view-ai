@@ -3,6 +3,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from src.core.config import settings
 from src.db.session import get_db
+from src.services.embedding import embedding_service
+from typing import List
+import google.generativeai as genai
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -29,6 +32,28 @@ async def health_check(db: AsyncSession = Depends(get_db)):
             "status": "unhealthy",
             "database": str(e)
         }
+
+@app.get("/test/embedding")
+async def test_embedding(q: str = "안녕하세요, CleanViewAI 테스트입니다."):
+    """
+    Gemini API를 통해 텍스트를 벡터로 변환하는지 테스트합니다.
+    """
+    try:
+        vector = await embedding_service.get_embedding(q)
+        return {
+            "input_text": q,
+            "vector_length": len(vector),  # 768이어야 함
+            "preview": vector[:5],         # 앞부분 5개 숫자만 샘플로 확인
+            "status": "success"
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.get("/test/list-models")
+async def list_models():
+    """사용 가능한 임베딩 모델 목록을 출력합니다."""
+    models = [m.name for m in genai.list_models() if 'embedContent' in m.supported_generation_methods]
+    return {"available_embedding_models": models}
 
 @app.get("/")
 async def root():
