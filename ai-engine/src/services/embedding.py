@@ -16,6 +16,11 @@ class EmbeddingService:
     def __init__(self):
         # Issue #1에서 설정한 API 키와 모델명을 로드합니다.
         genai.configure(api_key=settings.GOOGLE_API_KEY)
+        # 모델명에서 'models/' 접두사가 중복되지 않도록 처리
+        model_name = settings.EMBEDDING_MODEL
+        if not model_name.startswith('models/'):
+            model_name = f"models/{model_name}"
+        
         self.model = settings.EMBEDDING_MODEL
 
     async def get_embedding(self, text: str) -> List[float]:
@@ -30,11 +35,12 @@ class EmbeddingService:
                 return []
 
             # Google Generative AI SDK 호출
-            # task_type="retrieval_document"는 문서 저장 및 검색에 최적화된 옵션입니다.
+            # task_type="retrieval_document"는 문서 저장 및 검색에 최적화된 옵션
             result = genai.embed_content(
                 model=self.model,
                 content=cleaned_text,
-                task_type="retrieval_document"
+                task_type="retrieval_document",
+                output_dimensionality=768
             )
             
             # 768차원 리스트 반환
@@ -60,7 +66,8 @@ class EmbeddingService:
             result = genai.embed_content(
                 model=self.model,
                 content=cleaned_texts,
-                task_type="retrieval_document"
+                task_type="retrieval_document",
+                output_dimensionality=768
             )
             
             return result['embeddings']
