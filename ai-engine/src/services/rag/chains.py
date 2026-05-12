@@ -16,7 +16,7 @@ class RAGChain:
         # 1. Gemini 모델 초기화
         # RAG 답변의 정확도를 높이기 위해 온도를 낮게(0.2) 설정
         self.llm = ChatGoogleGenerativeAI(
-            model="gemini-1.5-flash",
+            model="gemini-2.5-flash",
             google_api_key=settings.GOOGLE_API_KEY,
             temperature=0.2,
             # 안전 설정이나 기타 파라미터를 여기서 조정 가능
