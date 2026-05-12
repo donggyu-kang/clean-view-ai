@@ -43,9 +43,12 @@ async def retrieve_node(state: RAGState):
     for chunk, score in search_results:
         context_parts.append(chunk.content)
         refs.append({
+            "id": chunk.id,                
+            "session_id": chunk.session_id,
             "content": chunk.content,
             "similarity": float(score),
-            "trace_id": chunk.trace_id
+            "trace_id": chunk.trace_id,
+            "created_at": chunk.created_at
         })
     
     # 다음 노드로 전달할 상태 업데이트
