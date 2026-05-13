@@ -2,9 +2,11 @@ import google.generativeai as genai
 from src.core.config import settings
 from typing import List
 import logging
+from src.core.otel import get_tracer
 
 # 로깅 설정: 운영 환경에서의 문제 추적을 위해 사용합니다.
 logger = logging.getLogger(__name__)
+tracer = get_tracer()
 
 class EmbeddingService:
     """
@@ -28,27 +30,37 @@ class EmbeddingService:
         단일 문장을 768차원 벡터로 변환
         질문 검색(Retrieval) 시 사용
         """
-        try:
-            # 텍스트 전처리: 줄바꿈 제거 및 양끝 공백 제거
-            cleaned_text = text.replace("\n", " ").strip()
-            if not cleaned_text:
-                return []
+        # 'embedding_generation' 스팬 시작
+        with tracer.start_as_current_span("embedding_generation") as span:
+            try:
+                # 텍스트 전처리: 줄바꿈 제거 및 양끝 공백 제거
+                cleaned_text = text.replace("\n", " ").strip()
+                if not cleaned_text:
+                    return []
+                
+                # 커스텀 속성 기록 (Attributes)
+                span.set_attribute("ai.input.text_length", len(cleaned_text))
+                span.set_attribute("ai.embedding.model_name", self.model)
 
-            # Google Generative AI SDK 호출
-            # task_type="retrieval_document"는 문서 저장 및 검색에 최적화된 옵션
-            result = genai.embed_content(
-                model=self.model,
-                content=cleaned_text,
-                task_type="retrieval_document",
-                output_dimensionality=768
-            )
+                # Google Generative AI SDK 호출
+                # task_type="retrieval_document"는 문서 저장 및 검색에 최적화된 옵션
+                result = genai.embed_content(
+                    model=self.model,
+                    content=cleaned_text,
+                    task_type="retrieval_document",
+                    output_dimensionality=768
+                )
+                
+                # 결과 속성 기록
+                span.set_attribute("ai.embedding.vector_dimension", 768)
+
+                # 768차원 리스트 반환
+                return result['embedding']
             
-            # 768차원 리스트 반환
-            return result['embedding']
-        
-        except Exception as e:
-            logger.error(f"단일 임베딩 생성 실패: {str(e)}")
-            raise e
+            except Exception as e:
+                span.record_exception(e) # 에러 정보 기록
+                logger.error(f"단일 임베딩 생성 실패: {str(e)}")
+                raise e
 
     async def get_embeddings(self, texts: List[str]) -> List[List[float]]:
         """
