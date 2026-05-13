@@ -4,6 +4,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import settings
+from src.core.otel import setup_otel
 from src.db.session import get_db
 from src.api.router import api_router
 
@@ -22,6 +23,8 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+setup_otel(app)
 
 # 3. 통합 라우터 등록
 # 모든 비즈니스 API는 /api 접두사 아래에 위치하게 됩니다 (예: /api/v1/chat/ask)
