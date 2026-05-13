@@ -16,9 +16,13 @@ class RAGChain:
 
     def __init__(self):
         # 1. Gemini 모델 초기화
+
+        # 모델 이름 변수로 저장
+        self.model_name = "gemini-2.5-flash"
+
         # RAG 답변의 정확도를 높이기 위해 온도를 낮게(0.2) 설정
         self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash",
+            model=self.model_name,
             google_api_key=settings.GOOGLE_API_KEY,
             temperature=0.2,
             # 안전 설정이나 기타 파라미터를 여기서 조정 가능
