@@ -16,11 +16,7 @@ public class TraceController {
 
     private final RestClient aiEngineClient;
 
-    @Operation(
-        summary = "AI 추론 과정 조회",
-        description = "⚠️ AI 엔진이 실행 중이어야 합니다.\n\n" +
-                      "채팅 응답에서 받은 traceId로 AI의 내부 추론 과정을 조회합니다."
-    )
+    @Operation(summary = "AI 추론 과정 조회 [⚠️ AI 엔진 실행 필요]")
     @GetMapping("/{traceId}")
     public ResponseEntity<Object> getTrace(
             @AuthenticationPrincipal String email,
