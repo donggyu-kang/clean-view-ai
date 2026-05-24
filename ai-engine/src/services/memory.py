@@ -64,6 +64,7 @@ class MemoryService:
             return {
                 "answer": final_state["answer"],
                 "references": final_state["references"],
+                "segments": final_state.get("segments", []),
                 "trace_id": trace_id
             }
 
