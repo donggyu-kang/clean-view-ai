@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Text, String, JSON, DateTime
+from sqlalchemy import Column, Integer, Text, String, JSON, DateTime, BigInteger
 from sqlalchemy.sql import func
 from pgvector.sqlalchemy import Vector
 from src.models.base import Base
@@ -30,8 +30,8 @@ class DocumentChunk(Base):
     # [1차 방화벽] 사용자 식별자 (멀티테넌시 데이터 격리의 절대적 기준)
     user_id = Column(String(100), index=True, nullable=False)
     
-    # 🔗 [2차 맥락 필터] 사이드바 채팅방 식별자 (출처방 분류 및 하이라이팅 기준)
-    session_id = Column(String(100), index=True, nullable=False)  
+    # [2차 맥락 필터] 사이드바 채팅방 식별자 (출처방 분류 및 하이라이팅 기준)
+    session_id = Column(BigInteger, index=True, nullable=False)  
     
     # OTel Trace ID (OpenTelemetry/Jaeger 답변 계보 추적용)
     trace_id = Column(String(100), nullable=True) 
