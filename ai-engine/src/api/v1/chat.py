@@ -46,7 +46,8 @@ async def ask_question(
         return ChatResponse(
             answer=result["answer"],
             references=result["references"],
-            trace_id=result["trace_id"]
+            trace_id=result["trace_id"],
+            segments=result["segments"]
         )
 
     except Exception as e:
