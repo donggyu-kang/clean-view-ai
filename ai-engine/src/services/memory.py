@@ -1,6 +1,6 @@
 import logging
 import uuid
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.services.rag.graph import rag_engine
@@ -20,7 +20,9 @@ class MemoryService:
         self, 
         db: AsyncSession, 
         question: str, 
-        session_id: str
+        user_id: str,                                # 1차 방화벽 유저 ID 인수 주입
+        current_session_id: int,                     # str -> int 동기화 (현재 채팅방 식별자)
+        allowed_session_ids: List[int]
     ) -> Dict[str, Any]:
         """
         1. LangGraph 추론 엔진 가동
@@ -35,7 +37,9 @@ class MemoryService:
             # 초기 상태(State) 주입
             initial_state = {
                 "question": question,
-                "session_id": session_id,
+                "user_id": user_id,                          # 상태 맵에 보안 키 장착
+                "current_session_id": current_session_id,     # 정수형 타입 동기화 주입
+                "allowed_session_ids": allowed_session_ids,
                 "db": db,
                 "trace_id": trace_id,
                 "context": None,
@@ -51,7 +55,8 @@ class MemoryService:
             await self._record_as_memory(
                 db=db,
                 text=final_state["answer"],
-                session_id=session_id,
+                user_id=user_id,                             # 보안 격리 저장 강제
+                session_id=current_session_id,               # 정수형(int)으로 이전 답변 적재
                 trace_id=trace_id
             )
 
@@ -69,7 +74,8 @@ class MemoryService:
         self, 
         db: AsyncSession, 
         text: str, 
-        session_id: str, 
+        user_id: str,                                
+        session_id: int,
         trace_id: str
     ) -> None:
         """AI의 답변을 벡터화하여 장기 기억 저장소에 보관"""
@@ -82,6 +88,7 @@ class MemoryService:
                 db=db,
                 texts=[f"AI의 이전 답변: {text}"], # 문맥 식별을 위한 접두어 추가
                 vectors=[vector],
+                user_id=user_id,                           
                 session_id=session_id,
                 trace_id=trace_id,
                 metadata_list=[{"role": "assistant", "type": "feedback_loop"}]
