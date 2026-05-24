@@ -26,22 +26,28 @@ async def ask_question(
     """
     RAG 추론 프로세스를 실행하고 답변 및 참고 문헌을 반환합니다.
     """
-    logger.info(f"질문 수신 - 세션: {request.session_id}, 메시지: {request.message[:20]}...")
-
+    logger.info(
+            f"질문 수신 - 유저: {request.user_id}, 현재세션: {request.session_id}, "
+            f"허용세션수: {len(request.allowed_session_ids)}, 메시지: {request.message[:20]}..."
+        )
+    
     try:
         # MemoryService를 통해 전체 RAG 사이클 실행
         # (기억 인출 -> 답변 생성 -> 답변 재저장)
         result = await memory_service.process_chat(
             db=db,
             question=request.message,
-            session_id=request.session_id
+            user_id=request.user_id,                       
+            current_session_id=request.session_id,
+            allowed_session_ids=request.allowed_session_ids
         )
 
         # 결과 반환 (Issue #3에서 정의한 ChatResponse 규격 준수)
         return ChatResponse(
             answer=result["answer"],
             references=result["references"],
-            trace_id=result["trace_id"]
+            trace_id=result["trace_id"],
+            segments=result["segments"]
         )
 
     except Exception as e:
