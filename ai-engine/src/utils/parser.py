@@ -1,47 +1,56 @@
-# src/utils/parser.py
-
 import re
 from typing import List, Dict, Any
 
-from sqlalchemy import true
-
 def parse_answer_to_segments(answer: str, retrieved_refs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
-    LLM의 답변 원문을 문장/어구 단위로 정밀 분해하고 [번호] 마킹을 파싱하여
-    프론트엔드가 하이라이트 밑줄을 치고 '어떻게 알았어?' 팝업을 띄울 수 있는 맵 데이터를 빌드
+    LLM의 답변 원문을 문장 단위로 정교하게 쪼개고, 문장 내에 포함된 [1], [2, 3] 등 
+    모든 형태의 인라인 출처 태그를 추출하여 실제 DB 레코드와 매핑합니다.
     """
-    # 정규식 설명: 문장 끝 공백이나 줄바꿈을 포함하여 문장을 나누되, 뒤에 붙은 [1] 같은 번호 마킹을 캡처 그룹으로 격리
-    # 예: "공부하느라 앉아있는 시간이 깁니다[1]." -> 그룹1: 문장 본문, 그룹2: 인덱스 숫자 '1'
-    pattern = r"([^.!?\n]+(?:[.!?]+|(?=\n)|$))\s*(?:\[(\d+)\])?"
-    matches = re.findall(pattern, answer)
+    # 1단계: 답변 전체를 문장 마침표(. ! ?) 또는 줄바꿈(\n) 기준으로 1차 러프하게 분할
+    raw_sentences = re.split(r'(?<=[.!?])\s+|\n', answer)
     
     segments = []
     
-    for text_block, ref_num in matches:
-        cleaned_text = text_block.strip()
-        if not cleaned_text:
+    for sentence in raw_sentences:
+        cleaned_sentence = sentence.strip()
+        if not cleaned_sentence:
             continue
             
-        # 기본 구조 세팅 (출처가 없는 순수 일반 지식 문장용 기본값)
+        # 기본 스펙 (출처 미검출 시 일반 지식 취급)
         segment_data = {
-            "text": cleaned_text,
+            "text": cleaned_sentence,
             "has_citation": False,
             "ref_id": None,
             "session_id": None
         }
         
-        # 문장 끝에 [1] 또는 [2] 같은 출처 태깅 꼬리표가 발견되었다면 하이드레이션 실행
-        if ref_num:
-            idx = int(ref_num) - 1 # 프롬프트가 start=1로 쐈으므로 배열 인덱스 맞춤용 -1
-            
-            # 인출되었던 원래 references 가용 범위 내에 있는지 안전 검사
-            if 0 <= idx < len(retrieved_refs):
-                target_chunk = retrieved_refs[idx]
-                
-                segment_data["has_citation"] = true
-                segment_data["ref_id"] = target_chunk["id"]          # 클릭 시 팝업을 띄울 기억의 마스터 키
-                segment_data["session_id"] = target_chunk["session_id"]  # 유리병 AI 카드 출처 매핑용 방 숫자 ID
+        # 2단계: 문장 어딘가에 포함된 모든 대괄호 숫자 패턴(예: [3] 또는 [2, 3])을 정밀 수색
+        # 숫자만 쏙쏙 뽑아내기 위해 \d+ 규칙 사용
+        citation_finder = re.findall(r'\[([\d\s,]+)\]', cleaned_sentence)
         
+        if citation_finder:
+            # 발견된 대괄호 묶음들 중 첫 번째 묶음을 타겟팅 (예: "2, 3")
+            raw_nums = citation_finder[0]
+            
+            # 쉼표 기반으로 쪼개서 개별 인덱스 숫자 리스트로 전환 (예: [2, 3])
+            ref_indices = [int(num.strip()) for num in raw_nums.split(',') if num.strip().isdigit()]
+            
+            if ref_indices:
+                # 3단계: 여러 인용 번호 중 가장 대표성 있는 첫 번째 출처 인덱스를 매칭용 마스터 키로 채택
+                primary_idx = ref_indices[0] - 1  # 1-based index를 0-based index로 보정
+                
+                # 가용 references 메모리 인덱스 유효 범위 방어선 구축
+                if 0 <= primary_idx < len(retrieved_refs):
+                    target_chunk = retrieved_refs[primary_idx]
+                    
+                    segment_data["has_citation"] = True
+                    segment_data["ref_id"] = target_chunk["id"]          # UI 팝업용 기억 마스터 키
+                    segment_data["session_id"] = target_chunk["session_id"]  # 유리병 AI 카드 소속방 ID
+                    
+                    # UI 미관을 해치지 않도록 문장 텍스트 본문에서 대괄호 꼬리표 [3] 양식을 깔끔하게 소거 가능
+                    # 기획서 사상에 맞게 원문 유지를 원하면 아래 줄은 주석 처리 가능
+                    # segment_data["text"] = re.sub(r'\[[\d\s,]+\]', '', cleaned_sentence).strip()
+
         segments.append(segment_data)
         
     return segments
