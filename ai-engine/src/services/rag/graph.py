@@ -13,13 +13,18 @@ logger = logging.getLogger(__name__)
 # 1. 그래프 상태(State) 정의
 # 노드 간에 공유될 데이터의 구조를 정의합니다.
 class RAGState(TypedDict):
-    question: str           # 사용자의 질문
-    session_id: str         # 세션 ID (데이터 격리 및 검색용)
-    db: AsyncSession        # 데이터베이스 세션
-    context: Optional[str]  # 검색된 과거 기억 텍스트
-    answer: Optional[str]   # AI가 생성한 최종 답변
-    references: List[Dict[str, Any]] # 시각화에 필요한 참고 문헌 정보
-    trace_id: Optional[str] # 추적을 위한 ID
+    question: str                    # 사용자의 실시간 질문 메시지
+    #[1차 방화벽] 멀티테넌시 보안을 위한 마스터 키
+    user_id: str                     
+    #[타입 동기화] Spring Boot 엔티티와 싱크를 맞춘 정수형 현재 방 식별자
+    current_session_id: int          
+    #[2차 맥락 필터] 유저 소유의 전체 채팅 세션방 숫자 목록
+    allowed_session_ids: List[int]   
+    db: AsyncSession                 # 결정론적 커넥션 풀을 타는 비동기 DB 세션
+    context: Optional[str]           # 지식 쿼리를 통해 인출 및 증감된과거 기억 텍스트 원문
+    answer: Optional[str]            # Gemini LLM이 도출해 낸 최종 답변
+    references: List[Dict[str, Any]] # 프론트 단의 기억 카드 팝업을 그리기 위한 하위 패킷 리스트
+    trace_id: Optional[str]          # OpenTelemetry 추적 컨텍스트 ID
 
 # 2. 노드(Node) 구현: 기억 인출 (Retrieve)
 async def retrieve_node(state: RAGState):
@@ -33,7 +38,9 @@ async def retrieve_node(state: RAGState):
     search_results = await vector_service.search_similar_chunks(
         db=state["db"],
         query_vector=query_vector,
-        session_id=state["session_id"],
+        user_id=state["user_id"],                         # 1차 보안 잠금 장착
+        current_session_id=state["current_session_id"],   # 정수형 스위칭 연동
+        allowed_session_ids=state["allowed_session_ids"],
         limit=3
     )
     
