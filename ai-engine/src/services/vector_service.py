@@ -21,7 +21,7 @@ class VectorService:
         texts: List[str], 
         vectors: List[List[float]], 
         user_id: str,
-        session_id: str,
+        session_id: int,
         trace_id: Optional[str] = None,
         metadata_list: Optional[List[Dict[str, Any]]] = None
     ) -> None:
@@ -57,8 +57,8 @@ class VectorService:
         db: AsyncSession, 
         query_vector: List[float], 
         user_id: str,
-        current_session_id: str,                     # 현재 질문이 들어온 채팅방 ID
-        allowed_session_ids: Optional[List[str]] = None, # 유저가 보유한 전체 채팅방 ID 목록 (Spring Boot 연동)
+        current_session_id: int,                     # 현재 질문이 들어온 채팅방 ID
+        allowed_session_ids: Optional[List[int]] = None, # 유저가 보유한 전체 채팅방 ID 목록 (Spring Boot 연동)
         limit: int = 3,
         min_similarity: float = 0.7
     ) -> List[Tuple[DocumentChunk, float]]:
