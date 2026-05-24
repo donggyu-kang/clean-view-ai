@@ -47,11 +47,16 @@ async def retrieve_node(state: RAGState):
     # 검색 결과 가공
     context_parts = []
     refs = []
-    for chunk, score in search_results:
-        context_parts.append(chunk.content)
+    
+    #[핵심 변경]: enumerate를 사용하여 인출된 기억 조각에 1부터 순서대로 번호표를 강제 부여
+    for idx, (chunk, score) in enumerate(search_results, start=1):
+        # LLM이 인덱스를 명확히 식별할 수 있도록 포맷팅 가공하여 주입
+        context_parts.append(f"[기억 조각 {idx}]\n내용: {chunk.content}")
+        
+        # 프론트엔드 응답용 매핑 배열 저장 (여기서 session_id는 정수형으로 가볍게 전송)
         refs.append({
             "id": chunk.id,                
-            "session_id": chunk.session_id,
+            "session_id": chunk.session_id, # int형 동기화 완료
             "content": chunk.content,
             "similarity": float(score),
             "trace_id": chunk.trace_id,
