@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.services.rag.graph import rag_engine
 from src.services.embedding import embedding_service
 from src.services.vector_service import vector_service
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 # 로깅 설정
 logger = logging.getLogger(__name__)
@@ -80,20 +81,43 @@ class MemoryService:
     ) -> None:
         """AI의 답변을 벡터화하여 장기 기억 저장소에 보관"""
         try:
-            # 1. 답변 텍스트 임베딩 생성
-            vector = await embedding_service.get_embedding(text)
+            # 1. 가이드라인 준수: 의미론적 텍스트 분할기 세팅
+            # 글자 수 기준이 아니라 문단(\n\n), 문장(\n), 공백 순으로 안전하게 쪼갭니다.
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=300,       # 한 조각당 글자 수 타겟을 줄여 정밀도 향상
+                chunk_overlap=50      # 앞뒤 조각을 50자씩 겹쳐 문맥 단절 방지 (Overlap 15~20% 준수)
+            )
             
-            # 2. 벡터 DB 저장
+            # 장문의 답변을 여러 개의 작은 청크 리스트로 분할
+            child_chunks = text_splitter.split_text(text)
+            
+            logger.info(f"[{trace_id}] 장문 답변을 {len(child_chunks)}개의 핵심 의미 조각으로 슬라이싱했습니다.")
+
+            # 2. 각 조각별로 루프를 돌며 개별 임베딩 생성 및 파이프라인 적재
+            texts_to_save = []
+            vectors_to_save = []
+            
+            for chunk_text in child_chunks:
+                # 문맥 식별 접두사 결합
+                formatted_text = f"AI의 이전 답변 조각: {chunk_text}"
+                
+                # 각각 벡터화 실행
+                vector = await embedding_service.get_embedding(formatted_text)
+                
+                texts_to_save.append(formatted_text)
+                vectors_to_save.append(vector)
+            
+            # 3. 고속 일괄(Bulk) Vector DB 저장 실행
             await vector_service.upsert_document_chunks(
                 db=db,
-                texts=[f"AI의 이전 답변: {text}"], # 문맥 식별을 위한 접두어 추가
-                vectors=[vector],
-                user_id=user_id,                           
+                texts=texts_to_save,
+                vectors=vectors_to_save,
+                user_id=user_id,
                 session_id=session_id,
                 trace_id=trace_id,
-                metadata_list=[{"role": "assistant", "type": "feedback_loop"}]
+                metadata_list=[{"role": "assistant", "type": "feedback_loop"} for _ in child_chunks]
             )
-            logger.info(f"[{trace_id}] AI의 답변이 장기 기억으로 저장되었습니다.")
+            logger.info(f"[{trace_id}] {len(texts_to_save)}개의 다이어트 청크가 유저 {user_id}의 뉴런 저장소에 안착했습니다.")
             
         except Exception as e:
             # 메모리 저장 실패가 전체 답변 반환을 막지 않도록 예외를 로깅만 하고 통과시킬 수 있음
