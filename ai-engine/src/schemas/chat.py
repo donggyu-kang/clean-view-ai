@@ -2,6 +2,13 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 from src.schemas.document import DocumentReference
 
+class SentenceSegment(BaseModel):
+    """프론트엔드가 답변의 문장별 밑줄 및 하이라이팅을 렌더링하기 위한 데이터 묶음 규격"""
+    text: str = Field(..., description="분할된 문장 또는 어구 텍스트 원문")
+    has_citation: bool = Field(..., description="해당 문장이 과거 기억을 인용한 근거 문장인지 여부")
+    ref_id: Optional[int] = Field(None, description="인용한 경우 매핑되는 실제 기억 조각(Chunk)의 고유 식별자 ID")
+    session_id: Optional[int] = Field(None, description="인용한 경우 해당 과거 기억이 속했던 출처 방 숫자 ID")
+
 class ChatRequest(BaseModel):
     """
     사용자의 채팅 요청 규격 (Spring Boot 게이트웨이 연동 명세)
@@ -39,6 +46,11 @@ class ChatResponse(BaseModel):
     answer: str = Field(..., description="AI가 생성한 최종 답변 텍스트")
     trace_id: str = Field(..., description="Jaeger 등에서 답변 생성 과정을 역추적하기 위한 OpenTelemetry Trace ID")
     
+    segments: List[SentenceSegment] = Field(
+        default_factory=list,
+        description="답변 문장들을 쪼개어 출처 바인딩 여부를 마킹해 둔 하이라이팅 렌더링용 배열 세트"
+    )
+
     # 설계도 기준: 답변의 근거가 된 기억 조각들의 리스트 (프론트 단의 카드 팝업 바인딩용)
     references: List[DocumentReference] = Field(
         default_factory=list, 
