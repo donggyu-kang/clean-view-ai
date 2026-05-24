@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.services.embedding import embedding_service
 from src.services.vector_service import vector_service
 from src.services.rag.chains import rag_chain
+from src.utils.parser import parse_answer_to_segments
 
 # 로깅 설정
 logger = logging.getLogger(__name__)
@@ -23,6 +24,9 @@ class RAGState(TypedDict):
     db: AsyncSession                 # 결정론적 커넥션 풀을 타는 비동기 DB 세션
     context: Optional[str]           # 지식 쿼리를 통해 인출 및 증감된과거 기억 텍스트 원문
     answer: Optional[str]            # Gemini LLM이 도출해 낸 최종 답변
+
+    segments: List[Dict[str, Any]]   # 하이라이트 팝업 매핑용 문장 단위 슬라이싱 세그먼트 배열
+
     references: List[Dict[str, Any]] # 프론트 단의 기억 카드 팝업을 그리기 위한 하위 패킷 리스트
     trace_id: Optional[str]          # OpenTelemetry 추적 컨텍스트 ID
 
@@ -80,8 +84,18 @@ async def generate_node(state: RAGState):
         context=state["context"]
         # 필요 시 state에서 history를 추출하여 전달할 수 있습니다.
     )
+
+    # 2. [핵심 추가]: 도출된 answer 원문과 retrieve 단계에서 넘어온 refs 정보를 대조하여 
+    # 프론트 단에서 밑줄을 칠 수 있는 문장 단위 하이라이트 맵(`segments`)을 정밀 빌드
+    calculated_segments = parse_answer_to_segments(
+        answer=answer,
+        retrieved_refs=state["references"]
+    )
     
-    return {"answer": answer}
+    return {
+        "answer": answer,
+        "segments": calculated_segments
+    }
 
 # 4. 그래프 구성 (Graph Construction)
 def build_rag_graph():
