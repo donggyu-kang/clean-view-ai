@@ -5,14 +5,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.models.document import DocumentChunk
 from src.core.otel import get_tracer 
 
-# 로깅 설정
+# 로깅 및 트레이서 설정
 logger = logging.getLogger(__name__)
 tracer = get_tracer()
 
 class VectorService:
     """
-    pgvector를 사용하여 벡터 데이터의 저장 및 유사도 검색을 수행하는 서비스
-    RAG(Retrieval-Augmented Generation) 파이프라인의 핵심 엔진 역할
+    pgvector를 사용하여 벡터 데이터의 저장 및 크로스 세션 유사도 검색을 수행하는 서비스.
+    사용자의 전방위적 채팅방 기억을 검색하되, 출처를 투명하게 분류합니다.
     """
 
     async def upsert_document_chunks(
@@ -20,23 +20,23 @@ class VectorService:
         db: AsyncSession, 
         texts: List[str], 
         vectors: List[List[float]], 
+        user_id: str,
         session_id: str,
         trace_id: Optional[str] = None,
         metadata_list: Optional[List[Dict[str, Any]]] = None
     ) -> None:
         """
-        텍스트 조각과 그에 대응하는 임베딩 벡터를 DB에 저장
-        '유리병 AI'를 위해 trace_id를 함께 기록
+        텍스트 조각과 그에 대응하는 임베딩 벡터를 특정 채팅방(session_id) 명세로 DB에 저장
         """
         try:
             chunks = []
             for i, (text, vector) in enumerate(zip(texts, vectors)):
-                # 메타데이터가 있으면 가져오고 없으면 빈 딕셔너리
                 meta = metadata_list[i] if metadata_list else {}
                 
                 chunk = DocumentChunk(
                     content=text,
-                    embedding=vector, # 768차원 벡터
+                    embedding=vector, 
+                    user_id=user_id,
                     session_id=session_id,
                     trace_id=trace_id,
                     metadata_json=meta
@@ -56,32 +56,35 @@ class VectorService:
         self, 
         db: AsyncSession, 
         query_vector: List[float], 
-        session_id: str, 
+        user_id: str,
+        current_session_id: str,                     # 현재 질문이 들어온 채팅방 ID
+        allowed_session_ids: Optional[List[str]] = None, # 유저가 보유한 전체 채팅방 ID 목록 (Spring Boot 연동)
         limit: int = 3,
         min_similarity: float = 0.7
     ) -> List[Tuple[DocumentChunk, float]]:
         """
-        사용자 질문(벡터)과 가장 유사한 과거 기억을 검색
-        pgvector의 '<=>' 연산자를 사용하여 코사인 거리를 계산
+        사용자 질문과 유사한 과거 기억을 검색하되, 허용된 모든 세션(채팅목록)을 대상으로 함.
+        어떤 세션에서 인출되었는지 출처를 구분하여 계보 추적 지표를 생성합니다.
         """
         with tracer.start_as_current_span("vector_db_retrieval") as span:
             try:
-                # 입력 속성 기록
-                span.set_attribute("db.retrieval.top_k", limit)
-                span.set_attribute("db.retrieval.session_id", session_id)
+                span.set_attribute("db.retrieval.user_id", user_id)
 
-                # 1. 코사인 거리(Cosine Distance) 계산
-                # pgvector: <=> 연산자는 코사인 거리를 반환 (0: 일치, 2: 정반대)
                 distance_fn = DocumentChunk.embedding.cosine_distance(query_vector)
-                
-                # 2. 유사도 점수 변환 (1 - distance) -> 1.0에 가까울수록 유사함
                 similarity_score = (1 - distance_fn).label("similarity_score")
 
-                # 3. 쿼리 구성: 특정 세션 내에서 유사도가 높은 순으로 검색
+                # [이중 잠금 1단계] 타인의 기억은 연산 조차 안 되도록 user_id 필터를 상단에 강제 배치
                 query = (
                     select(DocumentChunk, similarity_score)
-                    .filter(DocumentChunk.session_id == session_id)
-                    .filter(similarity_score >= min_similarity) # 일정 수준 이상의 결과만 채택
+                    .filter(DocumentChunk.user_id == user_id) 
+                )
+                
+                # [이중 잠금 2단계] 내 기억들 중에서, 유저가 보유한 채팅 세션 리스트 안에서만 크로스 검색 허용
+                if allowed_session_ids:
+                    query = query.filter(DocumentChunk.session_id.in_(allowed_session_ids))
+
+                query = (
+                    query.filter(similarity_score >= min_similarity)
                     .order_by(similarity_score.desc())
                     .limit(limit)
                 )
@@ -89,13 +92,25 @@ class VectorService:
                 result = await db.execute(query)
                 rows = result.all()
 
-                # 결과 속성 기록 [설계 2단계 반영]
-                scores = [float(row.similarity_score) for row in rows]
+                # 4. 결과 지표 추출 및 '출처 세션' 동적 판별 알고리즘
+                scores = []
+                source_sessions = []
+                
+                for row in rows:
+                    chunk = row[0]  # DocumentChunk 객체
+                    score = float(row.similarity_score)
+                    scores.append(score)
+                    
+                    # [설계 반영] 현재 방에서 나온 기억인지, 타 세션방에서 빌려온 기억인지 라벨링
+                    if chunk.session_id == current_session_id:
+                        source_sessions.append("current")
+                    else:
+                        source_sessions.append("other")
+
+                # 5. OpenTelemetry 결과 속성 세팅 
                 span.set_attribute("db.retrieval.hit_count", len(scores))
                 span.set_attribute("db.retrieval.scores", scores)
-                
-                # 각 청크가 현재 세션에서 왔는지 여부 (로직상 현재는 모두 current)
-                span.set_attribute("db.retrieval.source_sessions", ["current"] * len(scores))
+                span.set_attribute("db.retrieval.source_sessions", source_sessions) # 예: ["current", "other", "other"]
 
                 return rows
                 
