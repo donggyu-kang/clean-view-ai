@@ -21,6 +21,7 @@ class RAGState(TypedDict):
     current_session_id: int          
     #[2차 맥락 필터] 유저 소유의 전체 채팅 세션방 숫자 목록
     allowed_session_ids: List[int]   
+    excluded_session_ids: Optional[List[int]]
     db: AsyncSession                 # 결정론적 커넥션 풀을 타는 비동기 DB 세션
     context: Optional[str]           # 지식 쿼리를 통해 인출 및 증감된과거 기억 텍스트 원문
     answer: Optional[str]            # Gemini LLM이 도출해 낸 최종 답변
@@ -45,6 +46,7 @@ async def retrieve_node(state: RAGState):
         user_id=state["user_id"],                         # 1차 보안 잠금 장착
         current_session_id=state["current_session_id"],   # 정수형 스위칭 연동
         allowed_session_ids=state["allowed_session_ids"],
+        excluded_session_ids=state.get("excluded_session_ids", []),
         limit=3
     )
     

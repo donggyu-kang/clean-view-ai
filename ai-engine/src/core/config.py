@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     # Pydantic Settings 설정부
     model_config = SettingsConfigDict(
         # .env 파일을 현재 작업 디렉토리에서 찾기
-        env_file=".env",
+        env_file=(".env", ".env.local"),
         env_file_encoding="utf-8",
         # .env에 정의된 변수 중 Settings 클래스에 선언되지 않은 변수는 무시
         extra="ignore"

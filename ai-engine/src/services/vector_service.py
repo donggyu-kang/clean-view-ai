@@ -1,3 +1,4 @@
+import os
 import logging
 from typing import List, Tuple, Dict, Any, Optional
 from sqlalchemy import select, func
@@ -59,8 +60,9 @@ class VectorService:
         user_id: str,
         current_session_id: int,                     # 현재 질문이 들어온 채팅방 ID
         allowed_session_ids: Optional[List[int]] = None, # 유저가 보유한 전체 채팅방 ID 목록 (Spring Boot 연동)
-        limit: int = 3,
-        min_similarity: float = 0.7
+        excluded_session_ids: Optional[List[int]] = None,
+        limit: int = int(os.getenv("VECTOR_SEARCH_LIMIT", 3)),
+        min_similarity: float = float(os.getenv("VECTOR_MIN_SIMILARITY", 0.72))
     ) -> List[Tuple[DocumentChunk, float]]:
         """
         사용자 질문과 유사한 과거 기억을 검색하되, 허용된 모든 세션(채팅목록)을 대상으로 함.
@@ -82,6 +84,11 @@ class VectorService:
                 # [이중 잠금 2단계] 내 기억들 중에서, 유저가 보유한 채팅 세션 리스트 안에서만 크로스 검색 허용
                 if allowed_session_ids:
                     query = query.filter(DocumentChunk.session_id.in_(allowed_session_ids))
+
+                # 블랙리스트 제외 처리 수행
+                # SQLAlchemy의 notin_ 연산자를 이용하여 차단된 방의 지식 조각은 완전히 제외
+                if excluded_session_ids:
+                    query = query.filter(DocumentChunk.session_id.notin_(excluded_session_ids))
 
                 query = (
                     query.filter(similarity_score >= min_similarity)

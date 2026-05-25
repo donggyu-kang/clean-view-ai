@@ -39,7 +39,8 @@ async def ask_question(
             question=request.message,
             user_id=request.user_id,                       
             current_session_id=request.session_id,
-            allowed_session_ids=request.allowed_session_ids
+            allowed_session_ids=request.allowed_session_ids,
+            excluded_session_ids=request.excluded_session_ids
         )
 
         # 결과 반환 (Issue #3에서 정의한 ChatResponse 규격 준수)

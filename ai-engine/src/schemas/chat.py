@@ -27,13 +27,20 @@ class ChatRequest(BaseModel):
         description="과거 기억 탐색을 허용할 현재 유저의 전체 채팅 세션방 ID 리스트"
     )
 
+    excluded_session_ids: Optional[List[int]] = Field(
+        default_factory=list,
+        description="현재 대화방에서 기억 인출을 명시적으로 거부(차단)한 과거 채팅 세션방 ID 리스트"
+    )
+
+    # 유저가 화면에서 '이 대화에서 사용 안함'을 선언한 블랙리스트 방 리스트
     model_config = {
         "json_schema_extra": {
             "example": {
                 "message": "오늘 아침 식단 추천해줘",
                 "session_id": 1,
                 "user_id": "user_charlie_99",
-                "allowed_session_ids": [1, 2, 3]
+                "allowed_session_ids": [1, 2, 3],
+                "excluded_session_ids": [2]
             }
         }
     }
