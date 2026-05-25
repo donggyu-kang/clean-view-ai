@@ -61,7 +61,7 @@ async def readiness_check(db: AsyncSession = Depends(get_db)):
         }
     except Exception as e:
         logger.error(f"Readiness check failed (Database disconnected): {str(e)}")
-        # 🎯 [핵심 보정]: K3s 오케스트레이터가 감지할 수 있도록 HTTP 503 에러 코드를 강제 송출합니다.
+        # [핵심 보정]: K3s 오케스트레이터가 감지할 수 있도록 HTTP 503 에러 코드를 강제 송출합니다.
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Database disconnected. Engine is not ready to accept traffic."
