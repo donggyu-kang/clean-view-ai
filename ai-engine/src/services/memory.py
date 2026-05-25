@@ -23,7 +23,8 @@ class MemoryService:
         question: str, 
         user_id: str,                                # 1차 방화벽 유저 ID 인수 주입
         current_session_id: int,                     # str -> int 동기화 (현재 채팅방 식별자)
-        allowed_session_ids: List[int]
+        allowed_session_ids: List[int],
+        excluded_session_ids: Optional[List[int]] = None
     ) -> Dict[str, Any]:
         """
         1. LangGraph 추론 엔진 가동
@@ -41,6 +42,7 @@ class MemoryService:
                 "user_id": user_id,                          # 상태 맵에 보안 키 장착
                 "current_session_id": current_session_id,     # 정수형 타입 동기화 주입
                 "allowed_session_ids": allowed_session_ids,
+                "excluded_session_ids": excluded_session_ids if excluded_session_ids is not None else [],
                 "db": db,
                 "trace_id": trace_id,
                 "context": None,
