@@ -56,17 +56,17 @@ def setup_otel(app):
     # LAYERS 2 : 메트릭(Metric) 파이프라인 증설 ➔ Prometheus 목적지 설정 (신규)
     # =================================================================
     # OTel Collector 터미널이 번역할 수 있도록 OTLP gRPC 프로토콜 포맷으로 발송 세팅
-    otlp_metric_exporter = OTLPMetricExporter(endpoint=jaeger_endpoint, insecure=True)
-    
-    # 주기적 내보내기 리더 장착 (K3s 부하를 감안해 5초 간격으로 메트릭을 모아서 우체국에 토스)
-    metric_reader = PeriodicExportingMetricReader(
-        exporter=otlp_metric_exporter, 
-        export_interval_millis=5000
-    )
-    
-    # 전역 메트릭 프로바이더 등록 및 락
-    metric_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
-    metrics.set_meter_provider(metric_provider)
+    if env_mode == "production":
+        otlp_metric_exporter = OTLPMetricExporter(endpoint=jaeger_endpoint, insecure=True)
+        metric_reader = PeriodicExportingMetricReader(
+            exporter=otlp_metric_exporter, 
+            export_interval_millis=5000
+        )
+        metric_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
+        metrics.set_meter_provider(metric_provider)
+        logger.info("프로덕션 통합 메트릭(Metrics) 파이프라인이 정상 활성화되었습니다.")
+    else:
+        logger.info("로컬 개발 모드 진입: 메트릭 수집을 유연하게 스킵하고 트레이스(Trace) 레이어만 격리 가동합니다.")
 
     # =================================================================
     # LAYERS 3 : 플러그인 계측 자동 활성화 (Instrumentation)
