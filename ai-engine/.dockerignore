@@ -1,0 +1,27 @@
+# K3s 배포판 오염 및 로컬 데이터베이스 이진 파일 유출을 절대 방어
+docker-compose.yml
+postgres_data/
+
+# 로컬 개발용 샌드박스 환경 변수 격리 (K3s 배포판 오염 방지)
+.env
+.env.local
+.env.production
+
+# 로컬 파이썬 좀비 가상환경 및 캐시 파일 드롭
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Git 및 에디터 메타데이터 드롭
+.git
+.gitignore
+.vscode/
+.idea/
+
+# 도커 빌드 로그 및 테스트 잔재 소거
+.pytest_cache/
+htmlcov/
+*.log
