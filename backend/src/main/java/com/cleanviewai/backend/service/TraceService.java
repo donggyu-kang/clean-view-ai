@@ -20,7 +20,7 @@ import java.util.Map;
 public class TraceService {
 
     private final RestClient jaegerClient;
-    private final ObjectMapper objectMapper;
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * Jaeger에서 트레이스 원본을 가져와 핵심 3가지 데이터만 슬라이싱하여 반환
