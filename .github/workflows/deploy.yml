@@ -1,0 +1,62 @@
+name: Deploy to K3s
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Docker Hub 로그인 (yswmon)
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: 백엔드 이미지 빌드 & 푸시
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: yswmon/clean-view-backend:latest
+
+      - name: 프론트엔드 이미지 빌드 & 푸시
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: yswmon/clean-view-frontend:latest
+
+      - name: AI 엔진 이미지 빌드 & 푸시
+        if: ${{ secrets.DOCKERHUB_TOKEN_AI != '' }}
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME_AI }}
+          password: ${{ secrets.DOCKERHUB_TOKEN_AI }}
+
+      - name: AI 엔진 이미지 빌드 & 푸시
+        if: ${{ secrets.DOCKERHUB_TOKEN_AI != '' }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ./ai-engine
+          push: true
+          tags: ansgudwn/cleanviewai-ai-engine:latest
+
+      - name: K3s 재배포
+        run: |
+          sudo kubectl rollout restart deployment/cleanview-backend -n cleanview
+          sudo kubectl rollout restart deployment/cleanview-frontend -n cleanview
+          sudo kubectl rollout status deployment/cleanview-backend -n cleanview --timeout=120s
+          sudo kubectl rollout status deployment/cleanview-frontend -n cleanview --timeout=120s
+
+      - name: AI 엔진 재배포
+        if: ${{ secrets.DOCKERHUB_TOKEN_AI != '' }}
+        run: |
+          sudo kubectl rollout restart deployment/cleanview-ai-engine -n cleanview
+          sudo kubectl rollout status deployment/cleanview-ai-engine -n cleanview --timeout=120s
