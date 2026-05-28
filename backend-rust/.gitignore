@@ -1,0 +1,15 @@
+target
+.env
+.env.*
+!.env.example
+
+.idea/
+.vscode/
+*.swp
+*.swo
+
+*.log
+*.pid
+
+.DS_Store
+Thumbs.db
