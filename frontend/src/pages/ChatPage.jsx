@@ -82,27 +82,31 @@ export function ChatPage({ onMemoryOpen, memories, highlightId, onNewMemories })
   const [sending, setSending]                 = useState(false)
   const [loadingMessages, setLoadingMessages]  = useState(false)
   const bottomRef                             = useRef(null)
+  // stale closure 방지: sessions 최신값 ref
+  const sessionsRef                           = useRef([])
 
   const blockedIds  = memories.filter(m => m.blocked).map(m => m.id)
   const crossCount  = memories.filter(m => !m.isCurrent && !m.blocked).length
   const inputBaseBorder = `1.5px solid ${T.borderSoft}`
 
-  // 세션 목록 로드
+  // sessions 최신값 ref 동기화
+  useEffect(() => { sessionsRef.current = sessions }, [sessions])
+
+  // 세션 목록 로드 — currentSessionId 클로저 캡처 없이 함수형 업데이터 사용
   const loadSessions = useCallback(() => {
     getSessions()
       .then(data => {
         const list = data ?? []
         setSessions(list)
-        if (list.length > 0 && !currentSessionId) {
-          setCurrentSessionId(list[0].id)
-        }
+        // 함수형 업데이터: 현재 값이 null이면 첫 세션 자동 선택
+        setCurrentSessionId(prev => (prev == null && list.length > 0) ? list[0].id : prev)
       })
       .catch(console.error)
-  }, [currentSessionId])
+  }, [])
 
   useEffect(() => {
     loadSessions()
-  }, [])
+  }, [loadSessions])
 
   // 세션 변경 시 메시지 로드
   useEffect(() => {
@@ -151,8 +155,8 @@ export function ChatPage({ onMemoryOpen, memories, highlightId, onNewMemories })
         loadSessions()
       }
 
-      // references → memories 변환
-      const newMemories = refsToMemories(res.references ?? [], sessions)
+      // references → memories 변환 (sessionsRef: 최신 sessions 참조)
+      const newMemories = refsToMemories(res.references ?? [], sessionsRef.current)
       const uiSegments  = apiToUiSegments(res.segments ?? [])
 
       // AI 메시지 추가
@@ -316,7 +320,8 @@ export function ChatPage({ onMemoryOpen, memories, highlightId, onNewMemories })
             // assistant 메시지
             const msgMemories = m.memories ?? []
             const msgSegments = m.segments ?? []
-            const hasCitations = msgMemories.filter(mm => !mm.blocked).length > 0
+            // blockedIds는 App.jsx에서 내려오는 prop 기반 → 실시간으로 반영됨
+            const hasCitations = msgMemories.filter(mm => !blockedIds.includes(mm.id)).length > 0
 
             return (
               <div key={m.id} style={{ display: 'flex', gap: 12, animation: 'fadeUp 0.3s 0.1s both' }}>
@@ -365,7 +370,7 @@ export function ChatPage({ onMemoryOpen, memories, highlightId, onNewMemories })
                     {msgMemories.length > 0 && (
                       <>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
-                          {msgMemories.filter(mm => !mm.blocked).map(mm => (
+                          {msgMemories.filter(mm => !blockedIds.includes(mm.id)).map(mm => (
                             <div key={mm.id} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: T.textMid }}>
                               <div style={{ width: 16, height: 2.5, background: mm.segColor, borderRadius: 1 }} />
                               <span>{mm.fromRoom} 대화</span>
@@ -392,7 +397,7 @@ export function ChatPage({ onMemoryOpen, memories, highlightId, onNewMemories })
                               background: T.warnLight, border: `1px solid ${T.warnBorder}`,
                               borderRadius: 99, padding: '0 7px', fontSize: 10, color: T.warn, fontWeight: 700,
                             }}>
-                              다른 대화 {msgMemories.filter(mm => !mm.blocked).length}
+                              다른 대화 {msgMemories.filter(mm => !blockedIds.includes(mm.id)).length}
                             </span>
                           )}
                         </button>

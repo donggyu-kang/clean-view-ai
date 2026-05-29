@@ -48,7 +48,7 @@ public class ChatService {
         // FastAPI 요청 바디
         Map<String, Object> body = new HashMap<>();
         body.put("message", req.message());
-        body.put("user_id", session.getId().toString());
+        body.put("user_id", email);
         body.put("session_id", session.getId());
         body.put("allowed_session_ids", allowedSessionIds);
         body.put("excluded_session_ids", excludedSessionIds);
