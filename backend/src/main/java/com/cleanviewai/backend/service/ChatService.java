@@ -80,9 +80,13 @@ public class ChatService {
 
     private ChatSession resolveSession(String email, ChatMessageRequest req) {
         if (req.sessionId() != null) {
-            Long sessionId = Long.parseLong(req.sessionId());
-            return chatSessionRepository.findByIdAndUserId(sessionId, email)
-                    .orElseGet(() -> createSession(email, req.message()));
+            try {
+                Long sessionId = Long.parseLong(req.sessionId());
+                return chatSessionRepository.findByIdAndUserId(sessionId, email)
+                        .orElseGet(() -> createSession(email, req.message()));
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("유효하지 않은 세션 ID입니다: " + req.sessionId());
+            }
         }
         return createSession(email, req.message());
     }

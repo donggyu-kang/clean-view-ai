@@ -1,7 +1,5 @@
 import { useState, useCallback } from 'react'
-import { MEMORIES } from './constants/mockData'
 import { useTweaks } from './hooks/useTweaks'
-import { useTraceEngine } from './hooks/useTraceEngine'
 import { Sidebar } from './components/Sidebar'
 import { MemoryDrawer } from './components/MemoryDrawer'
 import { TraceModal } from './components/TraceModal'
@@ -14,13 +12,16 @@ const TWEAK_DEFAULTS = {
 }
 
 export function App() {
-  const [tweaks]               = useTweaks(TWEAK_DEFAULTS)
-  const [section, setSection]   = useState('chat')
+  const [tweaks]              = useTweaks(TWEAK_DEFAULTS)
+  const [section, setSection]  = useState('chat')
   const [drawerOpen, setDrawer] = useState(false)
-  const [traceOpen, setTrace]   = useState(false)
-  const [memories, setMemories] = useState(MEMORIES)
-  const [highlightId, setHl]    = useState(null)
-  const { trace, runTrace }     = useTraceEngine()
+  const [traceOpen, setTrace]  = useState(false)
+  const [memories, setMemories] = useState([])
+  const [highlightId, setHl]   = useState(null)
+
+  const handleNewMemories = useCallback((refs) => {
+    setMemories(refs)
+  }, [])
 
   const block = useCallback((id) => {
     setMemories(ms => ms.map(m => m.id === id ? { ...m, blocked: true } : m))
@@ -36,7 +37,14 @@ export function App() {
       <Sidebar active={section} onNav={setSection} />
 
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        {section === 'chat' && <ChatPage onMemoryOpen={() => setDrawer(true)} memories={memories} highlightId={highlightId} onSend={runTrace} trace={trace} />}
+        {section === 'chat' && (
+          <ChatPage
+            onMemoryOpen={() => setDrawer(true)}
+            memories={memories}
+            highlightId={highlightId}
+            onNewMemories={handleNewMemories}
+          />
+        )}
       </div>
 
       <MemoryDrawer
