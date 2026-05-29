@@ -6,9 +6,9 @@ on:
       - main
 
 jobs:
-  # 백엔드 & 프론트엔드 빌드/배포
-  deploy-main:
-    runs-on: self-hosted
+  # 이미지 빌드 & 푸시 (GitHub 서버에서 실행 - Docker 있음)
+  build-and-push:
+    runs-on: ubuntu-latest
     steps:
       - name: 코드 체크아웃
         uses: actions/checkout@v4
@@ -33,7 +33,12 @@ jobs:
           push: true
           tags: yswmon/clean-view-frontend:latest
 
-      - name: K3s 백엔드/프론트엔드 재배포
+  # K3s 재배포 (self-hosted runner에서 실행 - kubectl만 사용)
+  deploy:
+    runs-on: self-hosted
+    needs: build-and-push
+    steps:
+      - name: 백엔드/프론트엔드 재배포
         run: |
           sudo kubectl rollout restart deployment/cleanview-backend -n cleanview
           sudo kubectl rollout restart deployment/cleanview-frontend -n cleanview
@@ -41,8 +46,8 @@ jobs:
           sudo kubectl rollout status deployment/cleanview-frontend -n cleanview --timeout=120s
 
   # AI 엔진 빌드/배포 (토큰 등록 후 활성화)
-  deploy-ai:
-    runs-on: self-hosted
+  build-and-push-ai:
+    runs-on: ubuntu-latest
     if: ${{ vars.DEPLOY_AI == 'true' }}
     steps:
       - name: 코드 체크아웃
@@ -61,7 +66,12 @@ jobs:
           push: true
           tags: ansgudwn/cleanviewai-ai-engine:latest
 
-      - name: K3s AI 엔진 재배포
+  deploy-ai:
+    runs-on: self-hosted
+    needs: build-and-push-ai
+    if: ${{ vars.DEPLOY_AI == 'true' }}
+    steps:
+      - name: AI 엔진 재배포
         run: |
           sudo kubectl rollout restart deployment/cleanview-ai-engine -n cleanview
           sudo kubectl rollout status deployment/cleanview-ai-engine -n cleanview --timeout=120s
