@@ -48,7 +48,7 @@ public class ChatService {
         // FastAPI 요청 바디
         Map<String, Object> body = new HashMap<>();
         body.put("message", req.message());
-        body.put("user_id", email);
+        body.put("user_id", session.getId().toString());
         body.put("session_id", session.getId());
         body.put("allowed_session_ids", allowedSessionIds);
         body.put("excluded_session_ids", excludedSessionIds);
@@ -80,9 +80,13 @@ public class ChatService {
 
     private ChatSession resolveSession(String email, ChatMessageRequest req) {
         if (req.sessionId() != null) {
-            Long sessionId = Long.parseLong(req.sessionId());
-            return chatSessionRepository.findByIdAndUserId(sessionId, email)
-                    .orElseGet(() -> createSession(email, req.message()));
+            try {
+                Long sessionId = Long.parseLong(req.sessionId());
+                return chatSessionRepository.findByIdAndUserId(sessionId, email)
+                        .orElseGet(() -> createSession(email, req.message()));
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("유효하지 않은 세션 ID입니다: " + req.sessionId());
+            }
         }
         return createSession(email, req.message());
     }

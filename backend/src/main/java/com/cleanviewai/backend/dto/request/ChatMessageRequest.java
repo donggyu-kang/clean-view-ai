@@ -1,3 +1,11 @@
 package com.cleanviewai.backend.dto.request;
 
-public record ChatMessageRequest(String message, String sessionId) {}
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
+public record ChatMessageRequest(
+        @NotBlank(message = "메시지는 비어있을 수 없습니다.")
+        @Size(max = 2000, message = "메시지는 2000자를 초과할 수 없습니다.")
+        String message,
+        String sessionId
+) {}
