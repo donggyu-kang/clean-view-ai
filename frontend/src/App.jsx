@@ -20,9 +20,18 @@ export function App() {
   const [memories, setMemories]           = useState([])
   const [highlightId, setHl]             = useState(null)
   const [currentSessionId, setCurrentSessionId] = useState(null)
+  const [traceInfo, setTraceInfo]         = useState(null)
 
-  const handleNewMemories = useCallback((refs) => {
-    setMemories(refs)
+  // 세션 내 참조 기억 누적 — 응답마다 덮어쓰지 않고 새 항목만 추가
+  // clear: true 이면 명시적 초기화 (새 채팅, 세션 전환)
+  const handleNewMemories = useCallback((refs, { clear = false } = {}) => {
+    if (clear) { setMemories([]); return }
+    if (!refs.length) return
+    setMemories(prev => {
+      const existingIds = new Set(prev.map(m => m.id))
+      const fresh = refs.filter(r => !existingIds.has(r.id))
+      return fresh.length ? [...prev, ...fresh] : prev
+    })
   }, [])
 
   const block = useCallback((id, fromRoomId) => {
@@ -49,6 +58,7 @@ export function App() {
             highlightId={highlightId}
             onNewMemories={handleNewMemories}
             onSessionChange={setCurrentSessionId}
+            onTraceData={setTraceInfo}
           />
         )}
       </div>
@@ -61,7 +71,7 @@ export function App() {
         onLocate={locate}
         onTraceOpen={() => { setDrawer(false); setTrace(true) }}
       />
-      <TraceModal open={traceOpen} onClose={() => setTrace(false)} />
+      <TraceModal open={traceOpen} onClose={() => setTrace(false)} traceInfo={traceInfo} />
     </div>
   )
 }
