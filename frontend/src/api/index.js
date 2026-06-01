@@ -25,6 +25,8 @@ async function req(path, options = {}) {
   return res.json()
 }
 
+export const loginUser      = (email, password)            => req('/api/v1/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) })
+export const signupUser     = (name, email, password)      => req('/api/v1/auth/signup', { method: 'POST', body: JSON.stringify({ name, email, password }) })
 export const getSessions    = ()                   => req('/api/v1/sessions')
 export const getMessages    = (sid)                => req(`/api/v1/sessions/${sid}/messages`)
 export const deleteSession  = (sid)                => req(`/api/v1/sessions/${sid}`, { method: 'DELETE' })

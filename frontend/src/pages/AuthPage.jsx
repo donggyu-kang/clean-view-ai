@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { loginUser, signupUser } from '../api/index'
 import { T } from '../constants/tokens'
 import { Ico } from '../components/Ico'
 
@@ -40,25 +41,13 @@ export function AuthPage() {
 
     setLoading(true)
     try {
-      const url = mode === 'login' ? '/api/v1/auth/login' : '/api/v1/auth/signup'
-      const body = mode === 'login' ? { email, password } : { name, email, password }
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-
-      const data = await res.json()
-      if (!res.ok) {
-        setError(data.message || '요청에 실패했습니다.')
-        return
-      }
-
+      const data = mode === 'login'
+        ? await loginUser(email, password)
+        : await signupUser(name, email, password)
       login(data.token, data.name, data.email)
       navigate('/')
-    } catch {
-      setError('서버에 연결할 수 없습니다.')
+    } catch (err) {
+      setError(err.message || '서버에 연결할 수 없습니다.')
     } finally {
       setLoading(false)
     }

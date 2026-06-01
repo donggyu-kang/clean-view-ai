@@ -1,3 +1,4 @@
+import asyncio
 import google.generativeai as genai
 from src.core.config import settings
 from typing import List
@@ -22,8 +23,8 @@ class EmbeddingService:
         model_name = settings.EMBEDDING_MODEL
         if not model_name.startswith('models/'):
             model_name = f"models/{model_name}"
-        
-        self.model = settings.EMBEDDING_MODEL
+
+        self.model = model_name
 
     async def get_embedding(self, text: str) -> List[float]:
         """
@@ -42,9 +43,10 @@ class EmbeddingService:
                 span.set_attribute("ai.input.text_length", len(cleaned_text))
                 span.set_attribute("ai.embedding.model_name", self.model)
 
-                # Google Generative AI SDK 호출
+                # Google Generative AI SDK 호출 (동기 함수이므로 스레드 풀로 위임)
                 # task_type="retrieval_document"는 문서 저장 및 검색에 최적화된 옵션
-                result = genai.embed_content(
+                result = await asyncio.to_thread(
+                    genai.embed_content,
                     model=self.model,
                     content=cleaned_text,
                     task_type="retrieval_document",
@@ -74,8 +76,9 @@ class EmbeddingService:
             if not cleaned_texts:
                 return []
 
-            # 한 번의 API 호출로 여러 개의 임베딩을 생성 (성능 최적화)
-            result = genai.embed_content(
+            # 한 번의 API 호출로 여러 개의 임베딩을 생성 (동기 함수이므로 스레드 풀로 위임)
+            result = await asyncio.to_thread(
+                genai.embed_content,
                 model=self.model,
                 content=cleaned_texts,
                 task_type="retrieval_document",

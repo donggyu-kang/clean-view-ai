@@ -23,6 +23,7 @@ function refsToMemories(references = [], sessions = []) {
       blocked: false,
       usedIn: true,
       segColor: PALETTE[i % PALETTE.length],
+      date: formatDate(ref.created_at),
     }
   })
 }
@@ -160,6 +161,8 @@ export function ChatPage({ onMemoryOpen, memories, highlightId, onNewMemories, o
       // references → memories 변환 (sessionsRef: 최신 sessions 참조)
       const newMemories = refsToMemories(res.references ?? [], sessionsRef.current)
       const uiSegments  = apiToUiSegments(res.segments ?? [])
+      console.log('[DEBUG] newMemories:', newMemories)
+      console.log('[DEBUG] uiSegments:', uiSegments)
 
       // AI 메시지 추가
       setMessages(ms => [...ms, {
@@ -174,6 +177,7 @@ export function ChatPage({ onMemoryOpen, memories, highlightId, onNewMemories, o
       onNewMemories(newMemories)
 
     } catch (err) {
+      console.error('[ChatPage] sendMessage error:', err)
       setMessages(ms => [...ms, {
         id: `err-${Date.now()}`,
         role: 'error',
