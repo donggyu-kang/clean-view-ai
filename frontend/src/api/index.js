@@ -34,6 +34,7 @@ export const sendMessage    = (message, sessionId) => req('/api/v1/chat/message'
   method: 'POST',
   body: JSON.stringify({ message, sessionId: sessionId?.toString() ?? null }),
 })
+export const getTrace       = (traceId)              => req(`/api/v1/traces/${traceId}`)
 export const blockSession   = (currentId, blockedId) => req(`/api/v1/sessions/${currentId}/blocks`, {
   method: 'POST',
   body: JSON.stringify({ blockedSessionId: blockedId }),

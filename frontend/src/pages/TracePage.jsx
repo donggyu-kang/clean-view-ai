@@ -76,9 +76,9 @@ export function TracePage({ trace }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: 14 }}>
           {[
             { label: '총 소요 시간', val: traceStatus === 'idle' ? '—' : `${totalMs}ms`, icon: 'clock',   color: T.accent  },
-            { label: '참고한 기억', val: '3개',                                            icon: 'memory',  color: T.accent  },
+            { label: '참고한 기억', val: trace?.memoryCount != null ? `${trace.memoryCount}개` : '—', icon: 'memory',  color: T.accent  },
             { label: '처리된 요청', val: requestCount > 0 ? `${requestCount}회` : '—',    icon: 'warning', color: T.warn    },
-            { label: '사용된 토큰', val: '2,341',                                          icon: 'file',    color: T.textMid },
+            { label: '사용된 토큰', val: '—',                                              icon: 'file',    color: T.textMid },
           ].map(s => (
             <div key={s.label} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 14, padding: '18px 20px', boxShadow: T.shadow, animation: 'fadeUp 0.4s both' }}>
               <div style={{ width: 36, height: 36, borderRadius: 9, background: `${s.color}12`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>

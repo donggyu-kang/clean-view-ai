@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { T } from '../constants/tokens'
 import { Ico } from '../components/Ico'
 import { ChatSidebar } from '../components/ChatSidebar'
-import { getSessions, getMessages, sendMessage, deleteSession } from '../api/index'
+import { getSessions, getMessages, sendMessage, deleteSession, getTrace } from '../api/index'
 
 // 세션별 색상 팔레트
 const PALETTE = ['#F59E0B', '#8B5CF6', '#06B6D4', '#10B981', '#EF4444', '#F97316']
@@ -75,7 +75,7 @@ function AnswerText({ segments, memories, highlightId, blockedIds }) {
   )
 }
 
-export function ChatPage({ onMemoryOpen, memories, highlightId, onNewMemories, onSessionChange }) {
+export function ChatPage({ onMemoryOpen, memories, highlightId, onNewMemories, onSessionChange, onTraceData }) {
   const [sessions, setSessions]               = useState([])
   const [currentSessionId, setCurrentSessionId] = useState(null)
 
@@ -123,7 +123,7 @@ export function ChatPage({ onMemoryOpen, memories, highlightId, onNewMemories, o
     }
     setLoadingMessages(true)
     setMessages([])
-    onNewMemories([])
+    onNewMemories([], { clear: true })
     getMessages(currentSessionId)
       .then(data => {
         setMessages((data ?? []).map(m => ({
@@ -183,6 +183,13 @@ export function ChatPage({ onMemoryOpen, memories, highlightId, onNewMemories, o
       // App에 memories 전달 (드로어용)
       onNewMemories(newMemories)
 
+      // trace_id가 있으면 Jaeger에서 실제 타이밍 데이터 조회
+      if (res.trace_id) {
+        getTrace(res.trace_id)
+          .then(traceData => onTraceData?.({ trace: traceData, references: res.references ?? [] }))
+          .catch(err => console.warn('[ChatPage] trace 조회 실패:', err))
+      }
+
     } catch (err) {
       console.error('[ChatPage] sendMessage error:', err)
       setMessages(ms => [...ms, {
@@ -198,7 +205,7 @@ export function ChatPage({ onMemoryOpen, memories, highlightId, onNewMemories, o
   const handleNewChat = () => {
     setCurrentSessionId(null)
     setMessages([])
-    onNewMemories([])
+    onNewMemories([], { clear: true })
   }
 
   const handleSelectSession = (sessionId) => {
@@ -212,7 +219,7 @@ export function ChatPage({ onMemoryOpen, memories, highlightId, onNewMemories, o
         if (sessionId === currentSessionId) {
           setCurrentSessionId(null)
           setMessages([])
-          onNewMemories([])
+          onNewMemories([], { clear: true })
         }
         loadSessions()
       })
