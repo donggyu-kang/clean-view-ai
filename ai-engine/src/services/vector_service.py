@@ -1,7 +1,7 @@
 import os
 import logging
 from typing import List, Tuple, Dict, Any, Optional
-from sqlalchemy import select, func
+from sqlalchemy import or_, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.models.document import DocumentChunk
 from src.core.otel import get_tracer 
@@ -94,7 +94,13 @@ class VectorService:
                     # PostgreSQL의 JSONB 포함 연산자(@>)의 부정을 활용하여 성능 저하 없이 깔끔하게 걸러냄
                     for ex_id in excluded_session_ids:
                         query = query.filter(
-                            ~DocumentChunk.metadata_json['source_session_ids'].contains([ex_id])
+                            or_(
+                                # 트랩 방지 1. 'source_session_ids' 키가 아예 없는 일반 지식 청크는 무조건 통과!
+                                ~DocumentChunk.metadata_json.has_key('source_session_ids'),
+                                
+                                # 트랩 방지 2. 키가 있는 피드백 청크 중에서만 삭제된 방 ID가 없는지 정밀 검사!
+                                ~DocumentChunk.metadata_json['source_session_ids'].contains([ex_id])
+                            )
                         )
 
                 query = (
