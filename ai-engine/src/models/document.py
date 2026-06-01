@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, Text, String, JSON, DateTime, BigInteger
+from sqlalchemy import Column, Integer, Text, String, DateTime, BigInteger
 from sqlalchemy.sql import func
+from sqlalchemy.dialects.postgresql import JSONB
 from pgvector.sqlalchemy import Vector
 from src.models.base import Base
 
@@ -37,7 +38,7 @@ class DocumentChunk(Base):
     trace_id = Column(String(100), nullable=True) 
     
     # 추가 정보를 위한 확장 필드 (예: 카테고리 태그, 제목 등)
-    metadata_json = Column(JSON, nullable=True)
+    metadata_json = Column(JSONB, nullable=True)
     
     # 레코드 생성 시각 (시간 순서에 따른 계보 시각화 기준선)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
