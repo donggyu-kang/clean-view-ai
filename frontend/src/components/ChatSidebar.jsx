@@ -1,12 +1,16 @@
+import { useState } from 'react'
 import { T } from '../constants/tokens'
 import { Ico } from './Ico'
 
-export function ChatSidebar({ 
-  histories, 
-  currentHistoryId, 
-  onSelectHistory, 
+export function ChatSidebar({
+  histories,
+  currentHistoryId,
+  onSelectHistory,
   onNewChat,
+  onDeleteHistory,
 }) {
+  const [hoveredId, setHoveredId] = useState(null)
+
   return (
     <div style={{
       width: 280, flexShrink: 0,
@@ -61,33 +65,38 @@ export function ChatSidebar({
         {histories && histories.length > 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {histories.map(history => (
-              <button
+              <div
                 key={history.id}
-                onClick={() => onSelectHistory(history.id)}
-                title={history.title}
-                style={{
-                  width: '100%', padding: '12px 13px',
-                  borderRadius: 16, border: `1px solid ${currentHistoryId === history.id ? T.accent + '2A' : 'rgba(255,255,255,0.50)'}`, cursor: 'pointer',
-                  background: currentHistoryId === history.id 
-                    ? 'rgba(255,255,255,0.96)' 
-                    : 'rgba(255,255,255,0.62)',
-                  textAlign: 'left', transition: 'all 0.15s',
-                  display: 'flex', flexDirection: 'column', gap: 4,
-                  boxShadow: currentHistoryId === history.id ? '0 14px 30px rgba(15,23,42,0.10)' : '0 3px 10px rgba(15,23,42,0.04)',
-                }}
-                onMouseEnter={e => {
-                  if (currentHistoryId !== history.id) {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.82)'
-                    e.currentTarget.style.boxShadow = '0 10px 22px rgba(15,23,42,0.08)'
-                  }
-                }}
-                onMouseLeave={e => {
-                  if (currentHistoryId !== history.id) {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.62)'
-                    e.currentTarget.style.boxShadow = '0 3px 10px rgba(15,23,42,0.04)'
-                  }
-                }}
+                style={{ position: 'relative' }}
+                onMouseEnter={() => setHoveredId(history.id)}
+                onMouseLeave={() => setHoveredId(null)}
               >
+                <button
+                  onClick={() => onSelectHistory(history.id)}
+                  title={history.title}
+                  style={{
+                    width: '100%', padding: '12px 13px',
+                    borderRadius: 16, border: `1px solid ${currentHistoryId === history.id ? T.accent + '2A' : 'rgba(255,255,255,0.50)'}`, cursor: 'pointer',
+                    background: currentHistoryId === history.id
+                      ? 'rgba(255,255,255,0.96)'
+                      : 'rgba(255,255,255,0.62)',
+                    textAlign: 'left', transition: 'all 0.15s',
+                    display: 'flex', flexDirection: 'column', gap: 4,
+                    boxShadow: currentHistoryId === history.id ? '0 14px 30px rgba(15,23,42,0.10)' : '0 3px 10px rgba(15,23,42,0.04)',
+                  }}
+                  onMouseEnter={e => {
+                    if (currentHistoryId !== history.id) {
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.82)'
+                      e.currentTarget.style.boxShadow = '0 10px 22px rgba(15,23,42,0.08)'
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    if (currentHistoryId !== history.id) {
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.62)'
+                      e.currentTarget.style.boxShadow = '0 3px 10px rgba(15,23,42,0.04)'
+                    }
+                  }}
+                >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{
                       width: 28, height: 28, borderRadius: 8,
@@ -102,19 +111,42 @@ export function ChatSidebar({
                       fontSize: 12, fontWeight: 600, color: T.text,
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       flex: 1, minWidth: 0,
+                      paddingRight: hoveredId === history.id ? 24 : 0,
                     }}>
                       {history.title}
                     </div>
-                </div>
-                <div style={{
-                  fontSize: 10, color: T.textDim,
+                  </div>
+                  <div style={{
+                    fontSize: 10, color: T.textDim,
                     display: 'flex', justifyContent: 'space-between',
                     paddingLeft: 36,
-                }}>
-                  <span>{history.messageCount} 메시지</span>
-                  <span>{history.date}</span>
-                </div>
-              </button>
+                  }}>
+                    <span>{history.messageCount} 메시지</span>
+                    <span>{history.date}</span>
+                  </div>
+                </button>
+
+                {/* 호버 시 삭제 버튼 */}
+                {hoveredId === history.id && (
+                  <button
+                    onClick={e => { e.stopPropagation(); onDeleteHistory?.(history.id) }}
+                    title="대화 삭제"
+                    style={{
+                      position: 'absolute', top: 10, right: 10,
+                      width: 26, height: 26, borderRadius: 7,
+                      background: 'rgba(255,255,255,0.92)',
+                      border: '1px solid rgba(239,68,68,0.18)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', transition: 'all 0.15s',
+                      zIndex: 1,
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = '#FEF2F2'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.4)' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.92)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.18)' }}
+                  >
+                    <Ico name="trash" size={12} color="#EF4444" strokeWidth={1.6} />
+                  </button>
+                )}
+              </div>
             ))}
           </div>
         ) : (

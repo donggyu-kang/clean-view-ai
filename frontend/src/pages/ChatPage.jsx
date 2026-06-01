@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { T } from '../constants/tokens'
 import { Ico } from '../components/Ico'
 import { ChatSidebar } from '../components/ChatSidebar'
-import { getSessions, getMessages, sendMessage } from '../api/index'
+import { getSessions, getMessages, sendMessage, deleteSession } from '../api/index'
 
 // 세션별 색상 팔레트
 const PALETTE = ['#F59E0B', '#8B5CF6', '#06B6D4', '#10B981', '#EF4444', '#F97316']
@@ -208,6 +208,19 @@ export function ChatPage({ onMemoryOpen, memories, highlightId, onNewMemories, o
     setCurrentSessionId(sessionId)
   }
 
+  const handleDeleteSession = useCallback((sessionId) => {
+    deleteSession(sessionId)
+      .then(() => {
+        if (sessionId === currentSessionId) {
+          setCurrentSessionId(null)
+          setMessages([])
+          onNewMemories([])
+        }
+        loadSessions()
+      })
+      .catch(console.error)
+  }, [currentSessionId, loadSessions])
+
   // 세션 목록 → ChatSidebar 포맷 변환
   const histories = sessions.map(s => ({
     id: s.id,
@@ -225,6 +238,7 @@ export function ChatPage({ onMemoryOpen, memories, highlightId, onNewMemories, o
         currentHistoryId={currentSessionId}
         onSelectHistory={handleSelectSession}
         onNewChat={handleNewChat}
+        onDeleteHistory={handleDeleteSession}
       />
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
