@@ -53,6 +53,13 @@ class MemoryService:
             logger.info(f"[{trace_id}] LangGraph 추론 엔진 시작")
             final_state = await rag_engine.ainvoke(initial_state)
 
+            # final_state["references"] 내부의 dictionary에서 session_id를 수집한 뒤 중복 제거
+            referenced_sessions = [
+                ref["session_id"] for ref in final_state.get("references", [])
+                if isinstance(ref, dict) and "session_id" in ref
+            ]
+            source_session_ids = list(set(referenced_sessions))
+
             # C. 생성된 답변을 미래를 위한 '기억'으로 저장 (Feedback Loop)
             # 이 과정을 거쳐야 다음 질문에서 AI가 이 답변을 참고할 수 있음
             await self._record_as_memory(
@@ -60,7 +67,8 @@ class MemoryService:
                 text=final_state["answer"],
                 user_id=user_id,                             # 보안 격리 저장 강제
                 session_id=current_session_id,               # 정수형(int)으로 이전 답변 적재
-                trace_id=trace_id
+                trace_id=trace_id,
+                source_session_ids=source_session_ids
             )
 
             return {
@@ -80,7 +88,8 @@ class MemoryService:
         text: str, 
         user_id: str,                                
         session_id: int,
-        trace_id: str
+        trace_id: str,
+        source_session_ids: List[int]
     ) -> None:
         """AI의 답변을 벡터화하여 장기 기억 저장소에 보관"""
         try:
@@ -118,7 +127,7 @@ class MemoryService:
                 user_id=user_id,
                 session_id=session_id,
                 trace_id=trace_id,
-                metadata_list=[{"role": "assistant", "type": "feedback_loop"} for _ in child_chunks]
+                metadata_list=[{"role": "assistant", "type": "feedback_loop", "source_session_ids": source_session_ids} for _ in child_chunks]
             )
             logger.info(f"[{trace_id}] {len(texts_to_save)}개의 다이어트 청크가 유저 {user_id}의 뉴런 저장소에 안착했습니다.")
             
