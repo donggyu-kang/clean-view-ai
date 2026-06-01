@@ -56,7 +56,7 @@ public class ChatSessionController {
             @PathVariable Long id,
             @RequestBody BlockSessionRequest req) {
         chatSessionBlockService.blockSession(email, id, req.blockedSessionId());
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "기억 차단 해제",
