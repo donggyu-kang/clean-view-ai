@@ -5,31 +5,37 @@ on:
     branches:
       - main
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
-  # 변경된 서비스 경로 감지
+  # git diff로 변경된 서비스 직접 감지 (merge commit에서도 안정적)
   changes:
     runs-on: ubuntu-latest
     outputs:
-      backend:  ${{ steps.filter.outputs.backend }}
-      frontend: ${{ steps.filter.outputs.frontend }}
-      ai:       ${{ steps.filter.outputs.ai }}
+      backend:  ${{ steps.check.outputs.backend }}
+      frontend: ${{ steps.check.outputs.frontend }}
+      ai:       ${{ steps.check.outputs.ai }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            backend:
-              - 'backend/**'
-            frontend:
-              - 'frontend/**'
-            ai:
-              - 'ai-engine/**'
+      - id: check
+        run: |
+          BEFORE="${{ github.event.before }}"
+          SHA="${{ github.sha }}"
+
+          # 첫 push 또는 force push인 경우 전체 빌드
+          if [[ "$BEFORE" == "0000000000000000000000000000000000000000" ]]; then
+            echo "backend=true"  >> $GITHUB_OUTPUT
+            echo "frontend=true" >> $GITHUB_OUTPUT
+            echo "ai=true"       >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          CHANGED=$(git diff --name-only "$BEFORE" "$SHA")
+          echo "changed files: $CHANGED"
+
+          echo "backend=$(echo  "$CHANGED" | grep -q '^backend/'   && echo true || echo false)" >> $GITHUB_OUTPUT
+          echo "frontend=$(echo "$CHANGED" | grep -q '^frontend/'  && echo true || echo false)" >> $GITHUB_OUTPUT
+          echo "ai=$(echo       "$CHANGED" | grep -q '^ai-engine/' && echo true || echo false)" >> $GITHUB_OUTPUT
 
   # ── 백엔드 ─────────────────────────────────────────────────────────────────
 
