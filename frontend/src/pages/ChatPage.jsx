@@ -87,6 +87,8 @@ export function ChatPage({ onMemoryOpen, memories, highlightId, onNewMemories, o
   const bottomRef                             = useRef(null)
   // stale closure 방지: sessions 최신값 ref
   const sessionsRef                           = useRef([])
+  // 메시지 전송으로 새 세션이 생성된 경우 메시지 재로드 스킵 플래그
+  const skipNextReloadRef                     = useRef(false)
 
   const blockedIds  = memories.filter(m => m.blocked).map(m => m.id)
   const crossCount  = memories.filter(m => !m.isCurrent && !m.blocked).length
@@ -114,6 +116,11 @@ export function ChatPage({ onMemoryOpen, memories, highlightId, onNewMemories, o
   // 세션 변경 시 메시지 로드
   useEffect(() => {
     if (!currentSessionId) return
+    // 메시지 전송으로 새 세션이 생성된 경우 재로드 스킵 (segments/memories 유실 방지)
+    if (skipNextReloadRef.current) {
+      skipNextReloadRef.current = false
+      return
+    }
     setLoadingMessages(true)
     setMessages([])
     onNewMemories([])
@@ -151,6 +158,8 @@ export function ChatPage({ onMemoryOpen, memories, highlightId, onNewMemories, o
       // 새 세션이 생성된 경우 세션 목록 갱신
       const newSessionId = res.session_id ? parseInt(res.session_id) : null
       if (newSessionId && newSessionId !== currentSessionId) {
+        // 새 세션 ID로 전환 시 메시지 재로드 스킵 (segments/memories 유실 방지)
+        skipNextReloadRef.current = true
         setCurrentSessionId(newSessionId)
         loadSessions()
       } else {
