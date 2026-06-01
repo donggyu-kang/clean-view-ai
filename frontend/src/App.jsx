@@ -4,6 +4,7 @@ import { Sidebar } from './components/Sidebar'
 import { MemoryDrawer } from './components/MemoryDrawer'
 import { TraceModal } from './components/TraceModal'
 import { ChatPage } from './pages/ChatPage'
+import { blockSession } from './api/index'
 
 const TWEAK_DEFAULTS = {
   accentColor: '#5B4FF5',
@@ -16,16 +17,20 @@ export function App() {
   const [section, setSection]  = useState('chat')
   const [drawerOpen, setDrawer] = useState(false)
   const [traceOpen, setTrace]  = useState(false)
-  const [memories, setMemories] = useState([])
-  const [highlightId, setHl]   = useState(null)
+  const [memories, setMemories]           = useState([])
+  const [highlightId, setHl]             = useState(null)
+  const [currentSessionId, setCurrentSessionId] = useState(null)
 
   const handleNewMemories = useCallback((refs) => {
     setMemories(refs)
   }, [])
 
-  const block = useCallback((id) => {
+  const block = useCallback((id, fromRoomId) => {
     setMemories(ms => ms.map(m => m.id === id ? { ...m, blocked: true } : m))
-  }, [])
+    if (currentSessionId && fromRoomId) {
+      blockSession(currentSessionId, fromRoomId).catch(console.error)
+    }
+  }, [currentSessionId])
 
   const locate = useCallback((id) => {
     setHl(id)
@@ -43,6 +48,7 @@ export function App() {
             memories={memories}
             highlightId={highlightId}
             onNewMemories={handleNewMemories}
+            onSessionChange={setCurrentSessionId}
           />
         )}
       </div>

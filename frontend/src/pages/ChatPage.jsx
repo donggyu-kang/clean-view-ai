@@ -74,9 +74,11 @@ function AnswerText({ segments, memories, highlightId, blockedIds }) {
   )
 }
 
-export function ChatPage({ onMemoryOpen, memories, highlightId, onNewMemories }) {
+export function ChatPage({ onMemoryOpen, memories, highlightId, onNewMemories, onSessionChange }) {
   const [sessions, setSessions]               = useState([])
   const [currentSessionId, setCurrentSessionId] = useState(null)
+
+  useEffect(() => { onSessionChange?.(currentSessionId) }, [currentSessionId])
   const [messages, setMessages]               = useState([])
   const [input, setInput]                     = useState('')
   const [sending, setSending]                 = useState(false)

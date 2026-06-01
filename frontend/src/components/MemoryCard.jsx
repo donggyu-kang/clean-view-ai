@@ -10,7 +10,7 @@ export function MemoryCard({ mem, idx, onBlock }) {
   const doBlock = (e) => {
     e.stopPropagation()
     setExiting(true)
-    setTimeout(() => onBlock(mem.id), 380)
+    setTimeout(() => onBlock(mem.id, mem.fromRoomId), 380)
   }
 
   const borderColor = mem.blocked ? T.borderSoft : T.warnBorder
