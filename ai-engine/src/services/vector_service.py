@@ -90,6 +90,13 @@ class VectorService:
                 if excluded_session_ids:
                     query = query.filter(DocumentChunk.session_id.notin_(excluded_session_ids))
 
+                    # metadata_json -> 'source_session_ids' JSONB 배열 내에 excluded_session_ids에 포함된 ID가 있으면 탈락
+                    # PostgreSQL의 JSONB 포함 연산자(@>)의 부정을 활용하여 성능 저하 없이 깔끔하게 걸러냄
+                    for ex_id in excluded_session_ids:
+                        query = query.filter(
+                            ~DocumentChunk.metadata_json['source_session_ids'].contains([ex_id])
+                        )
+
                 query = (
                     query.filter(similarity_score >= min_similarity)
                     .order_by(similarity_score.desc())
