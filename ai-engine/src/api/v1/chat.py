@@ -1,10 +1,16 @@
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status
+from opentelemetry import metrics
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.session import get_db
 from src.schemas.chat import ChatRequest, ChatResponse
 from src.services.memory import memory_service
+
+active_requests = metrics.get_meter(__name__).create_up_down_counter(
+    "active_inference_requests",
+    description="Number of inference requests currently being processed",
+)
 
 # 로깅 설정
 logger = logging.getLogger(__name__)
@@ -32,12 +38,13 @@ async def ask_question(
         )
     
     try:
+        active_requests.add(1)
         # MemoryService를 통해 전체 RAG 사이클 실행
         # (기억 인출 -> 답변 생성 -> 답변 재저장)
         result = await memory_service.process_chat(
             db=db,
             question=request.message,
-            user_id=request.user_id,                       
+            user_id=request.user_id,
             current_session_id=request.session_id,
             allowed_session_ids=request.allowed_session_ids,
             excluded_session_ids=request.excluded_session_ids
@@ -57,3 +64,5 @@ async def ask_question(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="AI 엔진 내부에서 오류가 발생했습니다. 로그를 확인해주세요."
         )
+    finally:
+        active_requests.add(-1)
