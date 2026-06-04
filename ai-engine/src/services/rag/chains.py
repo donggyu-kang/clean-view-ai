@@ -44,7 +44,7 @@ class RAGChain:
             prompt_span.set_attribute("prompt.context_count", context_count)
             prompt_span.set_attribute("prompt.is_context_truncated", False) # 기본값
         
-        with tracer.start_as_current_span("llm_inference") as llm_span:
+        with tracer.start_as_current_span("generate_node") as llm_span:
             try:
                 # 기본 정보 기록
                 llm_span.set_attribute("ai.llm.model_name", self.model_name)
