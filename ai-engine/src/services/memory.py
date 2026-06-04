@@ -2,6 +2,7 @@ import logging
 import uuid
 from typing import Dict, Any, Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
+from opentelemetry import trace as otel_trace
 
 from src.services.rag.graph import rag_engine
 from src.services.embedding import embedding_service
@@ -13,14 +14,14 @@ logger = logging.getLogger(__name__)
 
 class MemoryService:
     """
-    사용자의 질문에 대해 추론을 실행하고, 
+    사용자의 질문에 대해 추론을 실행하고,
     그 결과를 다시 장기 기억으로 저장하는 피드백 루프를 관리
     """
 
     async def process_chat(
-        self, 
-        db: AsyncSession, 
-        question: str, 
+        self,
+        db: AsyncSession,
+        question: str,
         user_id: str,                                # 1차 방화벽 유저 ID 인수 주입
         current_session_id: int,                     # str -> int 동기화 (현재 채팅방 식별자)
         allowed_session_ids: List[int],
@@ -31,8 +32,9 @@ class MemoryService:
         2. 답변 및 참조 문헌 획득
         3. (피드백 루프) 생성된 답변을 벡터 DB에 저장
         """
-        # A. 고유 추적 ID 생성 (Glass-box 시각화의 핵심)
-        trace_id = f"trace-{uuid.uuid4().hex[:10]}"
+        # A. OTel 현재 스팬의 실제 trace ID 추출 (Jaeger 조회용)
+        ctx = otel_trace.get_current_span().get_span_context()
+        trace_id = format(ctx.trace_id, '032x') if ctx.is_valid else f"trace-{uuid.uuid4().hex[:10]}"
         
         try:
             # B. LangGraph 실행 (Retrieve -> Generate)
