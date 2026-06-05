@@ -1,0 +1,32 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ai-engine-prometheus-hpa
+  namespace: cleanview
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: cleanview-ai-engine
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+  - type: External
+    external:
+      metric:
+        name: active_inference_requests
+      target:
+        type: AverageValue
+        averageValue: "10"
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 85
