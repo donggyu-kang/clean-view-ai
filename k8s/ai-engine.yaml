@@ -1,0 +1,86 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ai-engine-config
+  namespace: cleanview
+data:
+  APP_ENV: "production"
+  OTEL_SERVICE_NAME: "cleanview-ai-engine"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.cleanview.svc.cluster.local:4317"
+  VECTOR_SEARCH_LIMIT: "3"
+  VECTOR_MIN_SIMILARITY: "0.72"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ai-engine-secret
+  namespace: cleanview
+type: Opaque
+stringData:
+  DATABASE_URL: "REPLACE_ME"  # e.g. postgresql+asyncpg://user:password@host:5432/dbname
+  GOOGLE_API_KEY: "REPLACE_ME"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cleanview-ai-engine
+  namespace: cleanview
+  labels:
+    app: ai-engine
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ai-engine
+  template:
+    metadata:
+      labels:
+        app: ai-engine
+    spec:
+      containers:
+        - name: ai-engine-container
+          image: ansgudwn/cleanviewai-ai-engine:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: ai-engine-config
+            - secretRef:
+                name: ai-engine-secret
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "400Mi"
+            limits:
+              cpu: "1000m"
+              memory: "512Mi"
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cleanview-ai-engine-service
+  namespace: cleanview
+spec:
+  selector:
+    app: ai-engine
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+  type: ClusterIP
